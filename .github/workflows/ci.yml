@@ -11,7 +11,7 @@ on:
 env:
   APP_NAME: gruf-relay
   BUILD_DIR: build
-  GO_VERSION: '1.24'
+  GO_VERSION: '1.26.3'
 
 jobs:
   lint:
