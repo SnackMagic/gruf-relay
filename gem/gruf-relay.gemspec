@@ -29,8 +29,7 @@ Gem::Specification.new do |spec|
   spec.executables = ["gruf-relay"]
 
   # Include essential files
-  spec.files = [
-    "exe/#{binary_name}",
+  spec.files = Dir["exe/gruf-relay-*"] + [
     "bin/gruf-relay",
     "lib/gruf_relay.rb",
     "lib/gruf_relay/version.rb"
