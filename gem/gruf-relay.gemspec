@@ -5,7 +5,6 @@ require_relative "lib/gruf_relay/version"
 # Get the platform from environment variable
 platform = ENV["PLATFORM"] || "ruby"
 gem_version = ENV["GEM_VERSION"] || GrufRelay::VERSION
-binary_name = ENV["BINARY_NAME"] || "gruf-relay"
 
 Gem::Specification.new do |spec|
   spec.name = "gruf-relay"
@@ -24,13 +23,11 @@ Gem::Specification.new do |spec|
   spec.metadata["source_code_uri"] = spec.homepage + "/tree/master"
   spec.metadata["changelog_uri"] = spec.homepage + "/blob/master/CHANGELOG.md"
 
-  # Include only the binary for the current platform
   spec.bindir = "bin"
   spec.executables = ["gruf-relay"]
 
   # Include essential files
-  spec.files = [
-    "exe/#{binary_name}",
+  spec.files = Dir["exe/gruf-relay-*"] + [
     "bin/gruf-relay",
     "lib/gruf_relay.rb",
     "lib/gruf_relay/version.rb"

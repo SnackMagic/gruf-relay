@@ -25,5 +25,4 @@ go.work
 *.swo
 build/
 
-/gem/exe/gruf-relay*
 /gem/pkg/*.gem
