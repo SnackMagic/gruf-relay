@@ -151,8 +151,8 @@ log:
   level: "debug"
   format: "json"
 server:
-host: "0.0.0.0"
-port: 8080
+  host: "0.0.0.0"
+  port: 8080
   proxy_timeout: "5s"
 workers:
   count: 2
