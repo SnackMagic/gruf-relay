@@ -176,7 +176,7 @@ metrics:
 
 The following environment variables can be used to override settings in the `config.yaml` file. Environment variables take precedence over the configuration file.
 
-*   `LOG_LEVEL`: Logging level (default: `debug`). Possible values: `debug`, `info`, `warn`, `error`.
+*   `LOG_LEVEL`: Logging level (default: `debug`). Possible values: `debug`, `info`, `warn`, `error`, `silent`. `silent` suppresses all output, including the stdout/stderr of the gruf worker processes.
 *   `LOG_FORMAT`: Logging format (default: `json`). Possible values: `json`, `text`.
 *   `SERVER_HOST`: Host address for the gRPC proxy (default: `0.0.0.0`).
 *   `SERVER_PORT`: Port for the gRPC proxy (default: `8080`).

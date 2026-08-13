@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+
+	"github.com/bibendi/gruf-relay/internal/log"
 )
 
 type Command interface {
@@ -32,8 +34,13 @@ type DefaultCommandExecutor struct{}
 
 func (d *DefaultCommandExecutor) NewCommand(name string, arg ...string) Command {
 	cmd := exec.Command(name, arg...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	if log.Silent() {
+		cmd.Stdout = io.Discard
+		cmd.Stderr = io.Discard
+	} else {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
 	return &DefaultCommand{cmd: cmd}
 }
 

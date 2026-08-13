@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"os"
 	"sync"
+	"sync/atomic"
 
 	"github.com/bibendi/gruf-relay/internal/config"
 	"github.com/lmittmann/tint"
@@ -28,11 +30,25 @@ var formatMap = map[string]LogFormat{
 	"pretty": LogFormatPretty,
 }
 
+// LevelSilent sits above every other level, so no record is ever enabled.
+const LevelSilent slog.Level = math.MaxInt
+
 var levelMap = map[string]slog.Level{
-	"debug": slog.LevelDebug,
-	"info":  slog.LevelInfo,
-	"warn":  slog.LevelWarn,
-	"error": slog.LevelError,
+	"debug":  slog.LevelDebug,
+	"info":   slog.LevelInfo,
+	"warn":   slog.LevelWarn,
+	"error":  slog.LevelError,
+	"silent": LevelSilent,
+}
+
+// silent reports whether logging is fully suppressed. Also consulted outside
+// this package to silence output that does not flow through the logger, such
+// as worker subprocess stdout/stderr.
+var silent atomic.Bool
+
+// Silent reports whether the log level suppresses all output.
+func Silent() bool {
+	return silent.Load()
 }
 
 func MustInitLogger(logCfg config.Log) Logger {
@@ -41,6 +57,7 @@ func MustInitLogger(logCfg config.Log) Logger {
 	if !ok {
 		panic(fmt.Sprintf("Invalid log level: %s", level))
 	}
+	silent.Store(logLevel == LevelSilent)
 
 	format := logCfg.Format
 	logFormat, ok := formatMap[format]
@@ -85,6 +102,12 @@ type Logger interface {
 func newLogger(w io.Writer, level slog.Level, format LogFormat) (*slog.Logger, error) {
 	if w == nil {
 		w = os.Stdout
+	}
+
+	// Nothing is enabled at LevelSilent, but discard the writer too so a handler
+	// that bypasses the level check cannot leak anything.
+	if level == LevelSilent {
+		w = io.Discard
 	}
 
 	var handler slog.Handler
