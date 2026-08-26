@@ -44,6 +44,17 @@ var _ = Describe("Logger", func() {
 		It("should return a Logger instance", func() {
 			Expect(MustInitLogger(logCfg)).NotTo(BeNil())
 		})
+
+		It("should not report silent for a regular level", func() {
+			MustInitLogger(logCfg)
+			Expect(Silent()).To(BeFalse())
+		})
+
+		It("should report silent for the silent level", func() {
+			logCfg.Level = "silent"
+			Expect(MustInitLogger(logCfg)).NotTo(BeNil())
+			Expect(Silent()).To(BeTrue())
+		})
 	})
 
 	Describe("newLogger", func() {
@@ -82,6 +93,19 @@ var _ = Describe("Logger", func() {
 			Expect(output).To(ContainSubstring("test message"))
 			Expect(output).To(ContainSubstring("key"))
 			Expect(output).To(ContainSubstring("value"))
+		})
+
+		It("should write nothing at the silent level", func() {
+			buffer := &bytes.Buffer{}
+			l, err := newLogger(buffer, LevelSilent, LogFormatJSON)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(l).NotTo(BeNil())
+
+			l.Debug("debug message")
+			l.Info("info message")
+			l.Warn("warn message")
+			l.Error("error message")
+			Expect(buffer.String()).To(BeEmpty())
 		})
 
 		It("should return an error for an invalid log format", func() {
