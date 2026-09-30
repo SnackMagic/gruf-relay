@@ -145,11 +145,7 @@ func (w *workerImpl) IsRunning() bool {
 
 func (w *workerImpl) FetchClientConn(ctx context.Context) (PulledClientConn, error) {
 	w.log.Debug("Waiting for available connection")
-	// TODO: add ability to configure timeout
-	fetchCtx, fetchCancel := context.WithTimeout(ctx, 5*time.Second)
-	defer fetchCancel()
-
-	conn, err := w.connPool.fetchConn(fetchCtx)
+	conn, err := w.connPool.fetchConn(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch gRPC client connection: %v", err)
 	}
