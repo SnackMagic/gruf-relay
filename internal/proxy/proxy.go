@@ -61,9 +61,12 @@ func (p *Proxy) HandleRequest(srv any, upstream grpc.ServerStream) error {
 		return status.Error(codes.Unavailable, "server unavailable")
 	}
 
+	fetchCtx, fetchCancel := context.WithTimeout(ctx, p.requestTimeout)
+	defer fetchCancel()
+
 	var client PulledClientConn
 	var err error
-	client, err = worker.FetchClientConn(ctx)
+	client, err = worker.FetchClientConn(fetchCtx)
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "failed getting grpc client connection: %v", err)
 	}
