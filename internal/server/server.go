@@ -24,13 +24,15 @@ type Server struct {
 	host  string
 	port  int
 	proxy Proxy
+	opts  []grpc.ServerOption
 }
 
-func NewServer(cfg config.Server, proxy Proxy) *Server {
+func NewServer(cfg config.Server, proxy Proxy, opts ...grpc.ServerOption) *Server {
 	return &Server{
 		host:  cfg.Host,
 		port:  cfg.Port,
 		proxy: proxy,
+		opts:  opts,
 	}
 }
 
@@ -45,7 +47,7 @@ func (s *Server) Serve(ctx context.Context) error {
 
 	encoding.RegisterCodec(codec.Codec())
 
-	server := grpc.NewServer(
+	opts := append([]grpc.ServerOption{
 		grpc.UnknownServiceHandler(s.proxy.HandleRequest),
 		grpc.NumStreamWorkers(0),
 		grpc.KeepaliveParams(keepalive.ServerParameters{
@@ -55,7 +57,8 @@ func (s *Server) Serve(ctx context.Context) error {
 			Time:                  5 * time.Second,  // Ping the client if it is idle for 5 seconds to ensure the connection is still active
 			Timeout:               1 * time.Second,  // Wait 1 second for the ping ack before assuming the connection is dead
 		}),
-	)
+	}, s.opts...)
+	server := grpc.NewServer(opts...)
 
 	errChan := make(chan error, 1)
 	defer close(errChan)

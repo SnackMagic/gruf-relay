@@ -170,6 +170,9 @@ metrics:
   port: 9394
   path: "/metrics"
   interval: "5s"
+tracing:
+  enabled: false
+  service: "gruf-relay"
 ```
 
 ### Environment Variables
@@ -193,6 +196,8 @@ The following environment variables can be used to override settings in the `con
 *   `METRICS_PORT`: Port for Prometheus metrics (default: `9394`).
 *   `METRICS_PATH`: Path for Prometheus metrics (default: `/metrics`).
 *   `METRICS_INTERVAL`: Interval for metrics collection (default: `5s`). Must be a valid duration string (e.g., "10s", "1m", "1m30s").
+*   `TRACING_ENABLED`: Send a Datadog APM span for every proxied request (default: `false`). The worker's own span is parented to it. The agent address, `DD_ENV` and `DD_VERSION` are read from the standard `DD_*` variables.
+*   `TRACING_SERVICE`: Datadog service name for relay spans (default: `gruf-relay`).
 
 Example:
 

@@ -11,6 +11,10 @@ import (
 	"sync/atomic"
 	"syscall"
 
+	grpctrace "github.com/DataDog/dd-trace-go/contrib/google.golang.org/grpc/v2"
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	"google.golang.org/grpc"
+
 	"github.com/bibendi/gruf-relay/internal/config"
 	"github.com/bibendi/gruf-relay/internal/healthcheck"
 	"github.com/bibendi/gruf-relay/internal/loadbalance"
@@ -104,9 +108,19 @@ func main() {
 		}()
 	}
 
+	// Run Datadog tracing
+	var serverOpts []grpc.ServerOption
+	if cfg.Tracing.Enabled {
+		if err := tracer.Start(tracer.WithService(cfg.Tracing.Service)); err != nil {
+			log.Error("Failed to start tracer", slog.Any("error", err))
+		} else {
+			serverOpts = append(serverOpts, grpc.StreamInterceptor(grpctrace.StreamServerInterceptor(grpctrace.WithStreamMessages(false))))
+		}
+	}
+
 	// Run gRPC server
 	grpcProxy := proxy.NewProxy(lb, cfg.Server.ProxyTimeout)
-	grpcServer := server.NewServer(cfg.Server, grpcProxy)
+	grpcServer := server.NewServer(cfg.Server, grpcProxy, serverOpts...)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -133,6 +147,8 @@ func main() {
 	}
 
 	wg.Wait()
+
+	tracer.Stop()
 
 	log.Info("Goodbye!")
 	os.Exit(exitCode)
