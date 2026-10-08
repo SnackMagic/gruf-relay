@@ -41,6 +41,7 @@ type Config struct {
 	HealthCheck HealthCheck `yaml:"health_check"`
 	Probes      Probes
 	Metrics     Metrics
+	Tracing     Tracing
 }
 
 type Log struct {
@@ -76,6 +77,11 @@ type Metrics struct {
 	Port     int           `yaml:"port" env:"METRICS_PORT" env-default:"9394"`
 	Path     string        `yaml:"path" env:"METRICS_PATH" env-default:"/metrics"`
 	Interval time.Duration `yaml:"interval" env:"METRICS_INTERVAL" env-default:"5s"`
+}
+
+type Tracing struct {
+	Enabled bool   `yaml:"enabled" env:"TRACING_ENABLED" env-default:"false"`
+	Service string `yaml:"service" env:"TRACING_SERVICE" env-default:"gruf-relay"`
 }
 
 func loadConfig(filename string) (*Config, error) {

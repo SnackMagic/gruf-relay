@@ -6,7 +6,10 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"strings"
 	"time"
+
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -76,7 +79,12 @@ func (p *Proxy) HandleRequest(srv any, upstream grpc.ServerStream) error {
 	defer cancel()
 
 	md, _ := metadata.FromIncomingContext(ctx)
-	outCtx := metadata.NewOutgoingContext(timeoutCtx, md.Copy())
+	md = md.Copy()
+	if span, ok := tracer.SpanFromContext(ctx); ok && span != nil {
+		span.SetTag("gruf_relay.worker", worker.String())
+		injectSpan(span, md)
+	}
+	outCtx := metadata.NewOutgoingContext(timeoutCtx, md)
 	log.Debug("Request metadata", slog.Any("metadata", md))
 	downstreamCtx, downstreamCancel := context.WithCancel(outCtx)
 	defer downstreamCancel()
@@ -123,6 +131,25 @@ func (p *Proxy) HandleRequest(srv any, upstream grpc.ServerStream) error {
 			}
 		}
 	}
+}
+
+// injectSpan replaces the caller's trace headers with the relay span's, so the
+// worker's span becomes a child of the relay span rather than a sibling of it.
+func injectSpan(span *tracer.Span, md metadata.MD) {
+	for k := range md {
+		if strings.HasPrefix(k, "x-datadog-") || k == "traceparent" || k == "tracestate" || k == "baggage" {
+			delete(md, k)
+		}
+	}
+	if err := tracer.Inject(span.Context(), mdCarrier(md)); err != nil {
+		log.Warn("Failed to inject trace context", slog.Any("error", err))
+	}
+}
+
+type mdCarrier metadata.MD
+
+func (c mdCarrier) Set(key, val string) {
+	metadata.MD(c).Set(key, val)
 }
 
 func proxyRequest(src grpc.ServerStream, dst grpc.ClientStream) chan error {
