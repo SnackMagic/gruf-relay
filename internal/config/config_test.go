@@ -21,6 +21,10 @@ log:
 server:
   host: "127.0.0.1"
   port: 8081
+  keepalive:
+    max_connection_idle: 5m
+    max_connection_age: 720h
+    max_connection_age_grace: 60s
 health_check:
   interval: 10s
 workers:
@@ -64,6 +68,11 @@ var _ = Describe("Config", func() {
 			Expect(cfg.Log.Format).To(Equal("json"))
 			Expect(cfg.Server.Host).To(Equal("127.0.0.1"))
 			Expect(cfg.Server.Port).To(Equal(8081))
+			Expect(cfg.Server.Keepalive.MaxConnectionIdle).To(Equal(5 * time.Minute))
+			Expect(cfg.Server.Keepalive.MaxConnectionAge).To(Equal(720 * time.Hour))
+			Expect(cfg.Server.Keepalive.MaxConnectionAgeGrace).To(Equal(60 * time.Second))
+			Expect(cfg.Server.Keepalive.Time).To(Equal(5 * time.Second))
+			Expect(cfg.Server.Keepalive.Timeout).To(Equal(1 * time.Second))
 			Expect(cfg.HealthCheck.Interval).To(Equal(10 * time.Second))
 
 			Expect(cfg.Workers.Count).To(Equal(4))
@@ -88,6 +97,32 @@ var _ = Describe("Config", func() {
 				cfg = MustLoadConfig()
 			}).NotTo(Panic())
 			Expect(cfg.Log.Level).To(Equal("warn"))
+		})
+
+		It("should default the server keepalive to the previous hard-coded values", func() {
+			defaultConfigPath = "nonexistent_config.yaml"
+
+			cfg := MustLoadConfig()
+			Expect(cfg.Server.Keepalive).To(Equal(Keepalive{
+				MaxConnectionIdle:     15 * time.Second,
+				MaxConnectionAge:      30 * time.Second,
+				MaxConnectionAgeGrace: 5 * time.Second,
+				Time:                  5 * time.Second,
+				Timeout:               1 * time.Second,
+			}))
+		})
+
+		It("should override the server keepalive from env variables", func() {
+			defaultConfigPath = "nonexistent_config.yaml"
+
+			os.Setenv("SERVER_KEEPALIVE_MAX_CONNECTION_IDLE", "10m")
+			defer os.Unsetenv("SERVER_KEEPALIVE_MAX_CONNECTION_IDLE")
+			os.Setenv("SERVER_KEEPALIVE_TIMEOUT", "20s")
+			defer os.Unsetenv("SERVER_KEEPALIVE_TIMEOUT")
+
+			cfg := MustLoadConfig()
+			Expect(cfg.Server.Keepalive.MaxConnectionIdle).To(Equal(10 * time.Minute))
+			Expect(cfg.Server.Keepalive.Timeout).To(Equal(20 * time.Second))
 		})
 
 		It("should load config from env variable CONFIG_PATH", func() {
@@ -146,6 +181,8 @@ var _ = Describe("Config", func() {
 			Entry("invalid health check interval", func(config *Config) { config.HealthCheck.Interval = 0 }, false),
 			Entry("invalid workers count", func(config *Config) { config.Workers.Count = 0 }, false),
 			Entry("invalid workers start port", func(config *Config) { config.Workers.StartPort = 0 }, false),
+			Entry("negative keepalive max connection age", func(config *Config) { config.Server.Keepalive.MaxConnectionAge = -time.Second }, false),
+			Entry("negative keepalive timeout", func(config *Config) { config.Server.Keepalive.Timeout = -time.Second }, false),
 		)
 	})
 })

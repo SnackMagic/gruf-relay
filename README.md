@@ -154,6 +154,12 @@ server:
   host: "0.0.0.0"
   port: 8080
   proxy_timeout: "5s"
+  keepalive:
+    max_connection_idle: "15s"
+    max_connection_age: "30s"
+    max_connection_age_grace: "5s"
+    time: "5s"
+    timeout: "1s"
 workers:
   count: 2
   start_port: 9000
@@ -184,6 +190,13 @@ The following environment variables can be used to override settings in the `con
 *   `SERVER_HOST`: Host address for the gRPC proxy (default: `0.0.0.0`).
 *   `SERVER_PORT`: Port for the gRPC proxy (default: `8080`).
 *   `SERVER_PROXY_TIMEOUT`: Timeout for proxy requests (default: `5s`). Must be a valid duration string (e.g., "10s", "1m", "1m30s").
+*   `SERVER_KEEPALIVE_MAX_CONNECTION_IDLE`: Close (GOAWAY) an inbound connection with no active RPCs after this long (default: `15s`). Behind a load balancer, keep it above the balancer's idle timeout, or the balancer may send a request on a connection the relay is closing.
+*   `SERVER_KEEPALIVE_MAX_CONNECTION_AGE`: Close (GOAWAY) every inbound connection after this long, busy or not (default: `30s`).
+*   `SERVER_KEEPALIVE_MAX_CONNECTION_AGE_GRACE`: Time RPCs still running on an aged-out connection get before it is closed forcibly (default: `5s`). Keep it at least `SERVER_PROXY_TIMEOUT`, or long requests are cut off.
+*   `SERVER_KEEPALIVE_TIME`: Ping a client after the connection has been idle this long (default: `5s`).
+*   `SERVER_KEEPALIVE_TIMEOUT`: Close the connection if a ping is not acknowledged within this long (default: `1s`).
+
+    A keepalive setting cannot be switched off with `0s`: zero is treated as unset and the default above applies. To effectively remove a limit, set a long duration such as `720h`.
 *   `HEALTH_CHECK_INTERVAL`: Interval for health checks (default: `5s`).  Must be a valid duration string (e.g., "10s", "1m", "1m30s").
 *   `HEALTH_CHECK_TIMEOUT`: Timeout for health checks (default: `3s`).  Must be a valid duration string (e.g., "10s", "1m", "1m30s").
 *   `WORKERS_COUNT`: Number of backend workers (default: `2`).

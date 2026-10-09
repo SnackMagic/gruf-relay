@@ -53,6 +53,18 @@ type Server struct {
 	Host         string        `yaml:"host" env:"SERVER_HOST" env-default:"0.0.0.0"`
 	Port         int           `yaml:"port" env:"SERVER_PORT" env-default:"8080"`
 	ProxyTimeout time.Duration `yaml:"proxy_timeout" env:"SERVER_PROXY_TIMEOUT" env-default:"5s"`
+	Keepalive    Keepalive     `yaml:"keepalive"`
+}
+
+// Keepalive holds the HTTP/2 keepalive parameters of the proxy's gRPC server.
+// cleanenv treats a zero value as unset and applies env-default, so a limit
+// cannot be switched off with "0s"; set a long duration (e.g. "720h") instead.
+type Keepalive struct {
+	MaxConnectionIdle     time.Duration `yaml:"max_connection_idle" env:"SERVER_KEEPALIVE_MAX_CONNECTION_IDLE" env-default:"15s"`
+	MaxConnectionAge      time.Duration `yaml:"max_connection_age" env:"SERVER_KEEPALIVE_MAX_CONNECTION_AGE" env-default:"30s"`
+	MaxConnectionAgeGrace time.Duration `yaml:"max_connection_age_grace" env:"SERVER_KEEPALIVE_MAX_CONNECTION_AGE_GRACE" env-default:"5s"`
+	Time                  time.Duration `yaml:"time" env:"SERVER_KEEPALIVE_TIME" env-default:"5s"`
+	Timeout               time.Duration `yaml:"timeout" env:"SERVER_KEEPALIVE_TIMEOUT" env-default:"1s"`
 }
 
 type Workers struct {
@@ -119,6 +131,11 @@ func (c *Config) validateConfig() error {
 
 	if c.Workers.StartPort <= 0 {
 		return fmt.Errorf("workers start_port must be a positive integer")
+	}
+
+	ka := c.Server.Keepalive
+	if ka.MaxConnectionIdle < 0 || ka.MaxConnectionAge < 0 || ka.MaxConnectionAgeGrace < 0 || ka.Time < 0 || ka.Timeout < 0 {
+		return fmt.Errorf("server keepalive durations must not be negative")
 	}
 
 	return nil
