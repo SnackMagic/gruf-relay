@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- The proxy server's HTTP/2 keepalive parameters are configurable (`server.keepalive.*` / `SERVER_KEEPALIVE_*`). The defaults keep the previously hard-coded values.
+
 ### Changed
 
 ### Fixed

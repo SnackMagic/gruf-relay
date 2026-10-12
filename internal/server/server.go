@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
-	"time"
 
 	"github.com/bibendi/gruf-relay/internal/codec"
 	"github.com/bibendi/gruf-relay/internal/config"
@@ -21,10 +20,11 @@ type Proxy interface {
 }
 
 type Server struct {
-	host  string
-	port  int
-	proxy Proxy
-	opts  []grpc.ServerOption
+	host      string
+	port      int
+	proxy     Proxy
+	keepalive keepalive.ServerParameters
+	opts      []grpc.ServerOption
 }
 
 func NewServer(cfg config.Server, proxy Proxy, opts ...grpc.ServerOption) *Server {
@@ -32,13 +32,25 @@ func NewServer(cfg config.Server, proxy Proxy, opts ...grpc.ServerOption) *Serve
 		host:  cfg.Host,
 		port:  cfg.Port,
 		proxy: proxy,
-		opts:  opts,
+		keepalive: keepalive.ServerParameters{
+			MaxConnectionIdle:     cfg.Keepalive.MaxConnectionIdle,
+			MaxConnectionAge:      cfg.Keepalive.MaxConnectionAge,
+			MaxConnectionAgeGrace: cfg.Keepalive.MaxConnectionAgeGrace,
+			Time:                  cfg.Keepalive.Time,
+			Timeout:               cfg.Keepalive.Timeout,
+		},
+		opts: opts,
 	}
 }
 
 func (s *Server) Serve(ctx context.Context) error {
 	addr := fmt.Sprintf("%s:%d", s.host, s.port)
-	log.Info("Starting gRPC server", slog.String("addr", addr))
+	log.Info("Starting gRPC server", slog.String("addr", addr),
+		slog.Duration("keepalive_max_connection_idle", s.keepalive.MaxConnectionIdle),
+		slog.Duration("keepalive_max_connection_age", s.keepalive.MaxConnectionAge),
+		slog.Duration("keepalive_max_connection_age_grace", s.keepalive.MaxConnectionAgeGrace),
+		slog.Duration("keepalive_time", s.keepalive.Time),
+		slog.Duration("keepalive_timeout", s.keepalive.Timeout))
 
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -50,13 +62,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	opts := append([]grpc.ServerOption{
 		grpc.UnknownServiceHandler(s.proxy.HandleRequest),
 		grpc.NumStreamWorkers(0),
-		grpc.KeepaliveParams(keepalive.ServerParameters{
-			MaxConnectionIdle:     15 * time.Second, // If a client is idle for 15 seconds, send a GOAWAY
-			MaxConnectionAge:      30 * time.Second, // If any connection is alive for more than 30 seconds, send a GOAWAY
-			MaxConnectionAgeGrace: 5 * time.Second,  // Allow 5 seconds for pending RPCs to complete before forcibly closing connections
-			Time:                  5 * time.Second,  // Ping the client if it is idle for 5 seconds to ensure the connection is still active
-			Timeout:               1 * time.Second,  // Wait 1 second for the ping ack before assuming the connection is dead
-		}),
+		grpc.KeepaliveParams(s.keepalive),
 	}, s.opts...)
 	server := grpc.NewServer(opts...)
 

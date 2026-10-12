@@ -32,6 +32,12 @@ var _ = Describe("Server", func() {
 		cfg = config.Server{
 			Host: "localhost",
 			Port: 6024,
+			Keepalive: config.Keepalive{
+				MaxConnectionIdle:     5 * time.Minute,
+				MaxConnectionAgeGrace: time.Minute,
+				Time:                  30 * time.Second,
+				Timeout:               10 * time.Second,
+			},
 		}
 		server = NewServer(cfg, mockProxy)
 		ctx, cancel = context.WithCancel(context.Background())
@@ -48,6 +54,14 @@ var _ = Describe("Server", func() {
 			Expect(server.host).To(Equal(cfg.Host))
 			Expect(server.port).To(Equal(cfg.Port))
 			Expect(server.proxy).To(Equal(mockProxy))
+		})
+
+		It("should take the keepalive parameters from the configuration", func() {
+			Expect(server.keepalive.MaxConnectionIdle).To(Equal(5 * time.Minute))
+			Expect(server.keepalive.MaxConnectionAge).To(Equal(time.Duration(0)))
+			Expect(server.keepalive.MaxConnectionAgeGrace).To(Equal(time.Minute))
+			Expect(server.keepalive.Time).To(Equal(30 * time.Second))
+			Expect(server.keepalive.Timeout).To(Equal(10 * time.Second))
 		})
 	})
 
