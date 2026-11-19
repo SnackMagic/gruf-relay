@@ -183,8 +183,9 @@ func (w *workerImpl) shutdown() error {
 	}
 
 	select {
-	case <-w.cmdDoneChan:
-		w.log.Info("Worker stopped")
+	case err := <-w.cmdDoneChan:
+		// A non-nil exit error is expected after SIGTERM; waitCmdDone already logged it.
+		w.log.Info("Worker stopped", slog.Any("exit_error", err))
 	case <-time.After(5 * time.Second):
 		w.log.Error("Timeout waiting for worker to exit, sending SIGKILL")
 		if err := w.cmd.Kill(); err != nil {
